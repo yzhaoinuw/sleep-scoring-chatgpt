@@ -1,0 +1,307 @@
+{
+  "summary": "Ground-truth references for 35_app13 at the same zoom level as the model-facing refinement images.",
+  "conventions": [
+    "Assume all unlabeled time is `NREM`.",
+    "Entries are listed in time order.",
+    "`approx` means the brief bout is obvious enough to detect, but exact onset and offset are less important than correct identification.",
+    "Brief `Wake` bouts immediately after `REM` are intentionally called out as post-`REM` wake bridges. Do not jump directly from a clear `REM` bout to `NREM` when a brief `Wake` bridge is visible."
+  ],
+  "sections": {
+    "0-2575 s": [
+      {
+        "index": "01",
+        "state": "Wake",
+        "timing": "approx 300 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band in the spectrogram."
+      },
+      {
+        "index": "02",
+        "state": "Wake",
+        "timing": "approx 425 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "03",
+        "state": "Wake",
+        "timing": "approx 745 s",
+        "reason": "wake interruption."
+      },
+      {
+        "index": "04",
+        "state": "Wake",
+        "timing": "approx 850 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "05",
+        "state": "Wake",
+        "timing": "approx 980 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "06",
+        "state": "Wake",
+        "timing": "approx 1190 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "07",
+        "state": "Wake",
+        "timing": "approx 1280 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "08",
+        "state": "Wake",
+        "timing": "approx 1470 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "09",
+        "state": "Wake",
+        "timing": "approx 1580 s",
+        "reason": "brief wake interruption."
+      },
+      {
+        "index": "10",
+        "state": "REM",
+        "timing": "1700-1750 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "11",
+        "state": "Wake",
+        "timing": "immediately after 1750 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "12",
+        "state": "REM",
+        "timing": "2100-2250 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "13",
+        "state": "Wake",
+        "timing": "immediately after 2250 s",
+        "reason": "brief post-`REM` wake bridge."
+      }
+    ],
+    "2575-5150 s": [
+      {
+        "index": "14",
+        "state": "Wake",
+        "timing": "approx 2590 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "15",
+        "state": "Wake",
+        "timing": "2845-3155 s",
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, but without a large NE rise."
+      },
+      {
+        "index": "16",
+        "state": "REM",
+        "timing": "3550-3620 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "17",
+        "state": "Wake",
+        "timing": "immediately after 3620 s to about 3740 s",
+        "reason": "post-`REM` wake bridge plus fading of the warmer 0-5 Hz band."
+      },
+      {
+        "index": "18",
+        "state": "Wake",
+        "timing": "3810-3950 s",
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, without strong REM-like support."
+      },
+      {
+        "index": "19",
+        "state": "Wake",
+        "timing": "4070-4320 s",
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, without strong REM-like support."
+      },
+      {
+        "index": "20",
+        "state": "Wake",
+        "timing": "approx 4660 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "21",
+        "state": "Wake",
+        "timing": "approx 5105 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      }
+    ],
+    "5150-7725 s": [
+      {
+        "index": "22",
+        "state": "REM",
+        "timing": "5320-5400 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "23",
+        "state": "Wake",
+        "timing": "immediately after 5400 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "24",
+        "state": "REM",
+        "timing": "5800-5845 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "25",
+        "state": "Wake",
+        "timing": "immediately after 5845 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "26",
+        "state": "Wake",
+        "timing": "approx 6180 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "27",
+        "state": "Wake",
+        "timing": "approx 6320 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "28",
+        "state": "REM",
+        "timing": "6550-6700 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "29",
+        "state": "Wake",
+        "timing": "immediately after 6700 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "30",
+        "state": "REM",
+        "timing": "7260-7310 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "31",
+        "state": "Wake",
+        "timing": "immediately after 7310 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "32",
+        "state": "Wake",
+        "timing": "approx 7450 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "33",
+        "state": "Wake",
+        "timing": "approx 7540 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "34",
+        "state": "Wake",
+        "timing": "7710-8170 s",
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, without a pronounced REM-like NE valley."
+      }
+    ],
+    "7725-10300 s": [
+      {
+        "index": "35",
+        "state": "Wake",
+        "timing": "approx 8465 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "36",
+        "state": "Wake",
+        "timing": "approx 8760 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "37",
+        "state": "REM",
+        "timing": "9130-9170 s",
+        "reason": "while NE shows a large valley at the same time."
+      },
+      {
+        "index": "38",
+        "state": "Wake",
+        "timing": "immediately after 9170 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "39",
+        "state": "Wake",
+        "timing": "approx 9240 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "40",
+        "state": "REM",
+        "timing": "9385-9415 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "41",
+        "state": "Wake",
+        "timing": "immediately after 9415 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "42",
+        "state": "Wake",
+        "timing": "approx 9600 s",
+        "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
+      },
+      {
+        "index": "43",
+        "state": "REM",
+        "timing": "9700-9725 s",
+        "reason": "NE shows a large valley at the same time."
+      },
+      {
+        "index": "44",
+        "state": "Wake",
+        "timing": "immediately after 9725 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "45",
+        "state": "REM",
+        "timing": "9835-9865 s",
+        "reason": "NE shows a large valley."
+      },
+      {
+        "index": "46",
+        "state": "Wake",
+        "timing": "immediately after 9865 s",
+        "reason": "brief post-`REM` wake bridge."
+      },
+      {
+        "index": "47",
+        "state": "REM",
+        "timing": "10100-10125 s",
+        "reason": "NE shows a large valley."
+      },
+      {
+        "index": "48",
+        "state": "Wake",
+        "timing": "immediately after 10125 s",
+        "reason": "brief post-`REM` wake bridge."
+      }
+    ]
+  }
+}

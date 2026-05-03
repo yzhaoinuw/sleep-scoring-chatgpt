@@ -34,6 +34,7 @@ The repo is meant to:
 
 - validates backend readiness,
 - loads the guidance prompt,
+- optionally loads a structured reference-example pack,
 - builds model-facing figures,
 - runs the overview pass and/or refinement passes,
 - parses structured Responses API output,
@@ -63,6 +64,14 @@ The repo is meant to:
 `sleep_scoring_chatgpt/config.py`
 - current default model, reasoning effort, refinement mode, and plotting settings.
 
+### 5. Reference example pack
+
+`sleep_scoring_chatgpt/sleep_scoring_examples/`
+
+- stores the bundled reference-example JSON metadata,
+- stores the model-facing overview and refinement PNGs used for calibration examples,
+- intentionally avoids the older app-specific `assets/` nesting from the parent project.
+
 ## Current Naming Direction
 
 The repo intentionally keeps `ChatGPT` in model-specific entrypoints such as `run_inference_chatgpt.py` and `inference_chatgpt.py`.
@@ -77,6 +86,11 @@ A typical run writes:
 - prediction-overlay PNGs,
 - `model_output.json`,
 - an optional thought trace markdown/text file.
+
+The bundled reference example pack also ships with:
+
+- `groundtruth_reasons_model_friendly.json`
+- overview/refinement PNGs for `35_app13`
 
 ## Input Expectations
 
@@ -99,8 +113,9 @@ Optional fields:
 The current copied test coverage is focused on helper and figure behavior in:
 
 - `tests/test_chatgpt_tools.py`
+- `tests/test_inference_chatgpt.py`
 
-These tests are useful smoke coverage for extraction regressions and renaming regressions.
+These tests are useful smoke coverage for extraction regressions, renaming regressions, and reference-pack formatting behavior.
 
 ## Important Notes For Future Agents
 

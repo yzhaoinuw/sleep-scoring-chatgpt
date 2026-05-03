@@ -18,7 +18,6 @@ import json
 import math
 import mimetypes
 import os
-import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -46,9 +45,7 @@ from sleep_scoring_chatgpt.make_figure import get_padded_sleep_scores, make_figu
 DEFAULT_CHATGPT_MODEL = CHATGPT_MODEL
 DEFAULT_SNAPSHOT_DIR = Path(tempfile.gettempdir()) / "sleep_scoring_app_data" / "chatgpt_snapshots"
 DEFAULT_GUIDANCE_PROMPT_PATH = Path(__file__).with_name("chatgpt_scoring_guidance.md")
-DEFAULT_REFERENCE_EXAMPLES_DIR = (
-    Path(__file__).resolve().parent / "assets" / "chatgpt_reference_examples"
-)
+DEFAULT_REFERENCE_EXAMPLES_DIR = Path(__file__).resolve().parent / "sleep_scoring_examples"
 DEFAULT_CONFIDENCE_THRESHOLD = 0.0
 DEFAULT_REASONING_EFFORT = CHATGPT_REASONING_EFFORT
 DEFAULT_SHOW_THOUGHTS = CHATGPT_SHOW_THOUGHTS
@@ -78,7 +75,7 @@ MODEL_PRICING_USD_PER_1M_TOKENS = {
         "output": 1.25,
     },
 }
-REFERENCE_EXAMPLE_TEXT_FILENAME = "groundtruth_reasons_model_friendly.txt"
+REFERENCE_EXAMPLE_DATA_FILENAME = "groundtruth_reasons_model_friendly.json"
 REFERENCE_EXAMPLE_IMAGE_SPECS = [
     (
         "35_app13_groundtruth_overview_0s_10300s.png",
@@ -654,38 +651,58 @@ def _image_path_to_data_url(image_path: str | Path) -> str:
     return f"data:{mime_type};base64,{encoded_bytes}"
 
 
-def _split_reference_examples_text(reference_text: str) -> tuple[str, dict[str, str]]:
-    """Split the model-friendly reference text into conventions and per-window notes."""
-    section_headers = {label for _filename, label, _description in REFERENCE_EXAMPLE_IMAGE_SPECS}
-    section_headers.discard("overview")
-    heading_pattern = re.compile(r"^\d+-\d+ s$")
+def _load_reference_examples_data(
+    reference_examples_dir: str | Path = DEFAULT_REFERENCE_EXAMPLES_DIR,
+) -> dict[str, Any] | None:
+    """Load the structured ground-truth reference pack metadata."""
+    reference_examples_dir = Path(reference_examples_dir)
+    reference_data_path = reference_examples_dir / REFERENCE_EXAMPLE_DATA_FILENAME
+    if not reference_data_path.exists():
+        return None
 
-    conventions_lines: list[str] = []
-    section_lines: dict[str, list[str]] = {}
-    current_header: str | None = None
+    raw_data = json.loads(reference_data_path.read_text(encoding="utf-8"))
+    if not isinstance(raw_data, dict):
+        raise ValueError("Reference example data must be a JSON object.")
 
-    for raw_line in reference_text.splitlines():
-        line = raw_line.rstrip()
-        stripped = line.strip()
+    return raw_data
 
-        if stripped in section_headers or heading_pattern.match(stripped):
-            current_header = stripped
-            section_lines.setdefault(current_header, [])
+
+def _format_reference_examples_conventions(reference_data: dict[str, Any]) -> str:
+    """Return the shared summary and conventions block for the reference pack."""
+    summary = str(reference_data.get("summary", "")).strip()
+    conventions = [
+        str(item).strip()
+        for item in reference_data.get("conventions", [])
+        if str(item).strip()
+    ]
+
+    lines: list[str] = []
+    if summary:
+        lines.append(summary)
+
+    if conventions:
+        if lines:
+            lines.append("")
+        lines.append("Conventions")
+        lines.extend(f"- {item}" for item in conventions)
+
+    return "\n".join(lines).strip()
+
+
+def _format_reference_section_notes(section_entries: list[dict[str, Any]]) -> str:
+    """Return one formatted note block for a reference-image time window."""
+    lines = []
+    for entry in section_entries:
+        index = str(entry.get("index", "")).strip()
+        state = str(entry.get("state", "")).strip()
+        timing = str(entry.get("timing", "")).strip()
+        reason = str(entry.get("reason", "")).strip()
+        if not (index and state and timing and reason):
             continue
 
-        if current_header is None:
-            conventions_lines.append(line)
-            continue
+        lines.append(f"[{index}] `{state}` | {timing} | {reason}")
 
-        section_lines[current_header].append(line)
-
-    return (
-        "\n".join(line for line in conventions_lines if line.strip()).strip(),
-        {
-            header: "\n".join(line for line in lines if line.strip()).strip()
-            for header, lines in section_lines.items()
-        },
-    )
+    return "\n".join(lines).strip()
 
 
 def _build_reference_examples_message(
@@ -693,15 +710,16 @@ def _build_reference_examples_message(
 ) -> dict[str, Any] | None:
     """Return a single user message containing the ground-truth reference pack."""
     reference_examples_dir = Path(reference_examples_dir)
-    reference_text_path = reference_examples_dir / REFERENCE_EXAMPLE_TEXT_FILENAME
-    if not reference_text_path.exists():
+    reference_data = _load_reference_examples_data(reference_examples_dir)
+    if not reference_data:
         return None
 
-    reference_text = reference_text_path.read_text(encoding="utf-8").strip()
-    if not reference_text:
-        return None
-
-    conventions_text, section_text = _split_reference_examples_text(reference_text)
+    conventions_text = _format_reference_examples_conventions(reference_data)
+    section_text = {
+        str(label).strip(): _format_reference_section_notes(entries)
+        for label, entries in reference_data.get("sections", {}).items()
+        if isinstance(entries, list)
+    }
     content: list[dict[str, Any]] = [
         {
             "type": "input_text",

@@ -35,7 +35,7 @@ include = ["sleep_scoring_chatgpt*"]
 [tool.setuptools.package-data]
 sleep_scoring_chatgpt = [
     "chatgpt_scoring_guidance.md",
-    "assets/chatgpt_reference_examples/*",
+    "sleep_scoring_examples/*",
 ]
 
 [tool.pytest.ini_options]

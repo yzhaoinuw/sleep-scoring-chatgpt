@@ -2,7 +2,13 @@
 *.py[cod]
 .pytest_cache/
 .venv/
+.tmp/
+.pytest_tmp/
+tmp*/
 chatgpt_preview_outputs/
 *.png
 *.json
 *.md.bak
+!sleep_scoring_chatgpt/sleep_scoring_examples/
+!sleep_scoring_chatgpt/sleep_scoring_examples/*.json
+!sleep_scoring_chatgpt/sleep_scoring_examples/*.png
