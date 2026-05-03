@@ -1,18 +1,20 @@
 # sleep-scoring-chatgpt
 
-Standalone backend-only extraction of the ChatGPT sleep-scoring preview workflow from the `sleep_scoring` project.
+Standalone backend-only extraction of the ChatGPT sleep-scoring preview workflow from the larger `sleep_scoring` project.
 
-## What it does
+## Overview
 
-This package runs the experimental ChatGPT inference flow on a single MATLAB recording without launching the Dash desktop app. It:
+This repository runs the experimental ChatGPT sleep-scoring pipeline on a single MATLAB recording without launching the Dash desktop app.
+
+The current workflow:
 
 - loads a `.mat` file containing EEG, EMG, and optional NE data,
-- renders model-facing Plotly snapshot images,
-- sends the guidance prompt plus images to the OpenAI Responses API,
-- parses structured Wake and REM segments,
-- writes preview artifacts including input images, prediction-overlay images, a JSON call log, and an optional thought trace.
+- renders model-facing snapshot images,
+- sends the scoring guidance plus images to the OpenAI Responses API,
+- parses structured Wake and REM intervals from the model response,
+- writes preview artifacts for inspection and presentation use.
 
-The workflow assumes the recording defaults to NREM and asks the model to mark only Wake and REM intervals.
+The scoring logic assumes the recording defaults to NREM and asks the model to identify only Wake and REM segments.
 
 ## Installation
 
@@ -29,6 +31,8 @@ $env:OPENAI_API_KEY = "your-api-key"
 
 ## Usage
 
+Run the backend on one recording:
+
 ```powershell
 python -m sleep_scoring_chatgpt.run_inference_chatgpt .\path\to\recording.mat .\chatgpt_preview_outputs\recording --reasoning-effort medium --refinement-mode fixed_sections --fixed-section-count 4
 ```
@@ -38,6 +42,15 @@ Or use the installed script:
 ```powershell
 sleep-scoring-chatgpt .\path\to\recording.mat .\chatgpt_preview_outputs\recording
 ```
+
+## Output
+
+A typical run writes:
+
+- model-facing input snapshot PNGs,
+- prediction-overlay PNGs,
+- `model_output.json` with model-call metadata,
+- an optional thought trace file when thoughts are enabled.
 
 ## CLI parameters
 
