@@ -36,7 +36,7 @@ The repo is meant to:
 - loads the guidance prompt,
 - optionally loads a structured reference-example pack,
 - builds model-facing figures,
-- runs the overview pass and/or refinement passes,
+- runs either one overview call or fixed one-hour zoom-window calls,
 - parses structured Responses API output,
 - overlays accepted Wake/REM segments onto the score array,
 - records per-call artifacts and optional thought traces.
@@ -62,7 +62,7 @@ The repo is meant to:
 - spectrogram and theta/delta helper used by the figure builders.
 
 `sleep_scoring_chatgpt/config.py`
-- current default model, reasoning effort, refinement mode, and plotting settings.
+- current default model, reasoning effort, inference mode, internal refinement-window duration, and plotting settings.
 
 ### 5. Reference example pack
 
@@ -89,8 +89,9 @@ A typical run writes:
 
 The bundled reference example pack also ships with:
 
-- `groundtruth_reasons_model_friendly.json`
-- overview/refinement PNGs for `35_app13`
+- `groundtruth_reasons.json`
+- one overview PNG for `overview_only`
+- three one-hour refinement PNGs for `fixed_windows`
 
 ## Input Expectations
 

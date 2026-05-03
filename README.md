@@ -14,6 +14,11 @@ The current workflow:
 - parses structured Wake and REM intervals from the model response,
 - writes preview artifacts for inspection and presentation use.
 
+The inference flow is intentionally limited to two modes:
+
+- `overview_only`: score one full-recording overview image
+- `fixed_windows`: score a sequence of fixed one-hour zoom windows
+
 The scoring logic assumes the recording defaults to NREM and asks the model to identify only Wake and REM segments.
 
 ## Installation
@@ -34,7 +39,7 @@ $env:OPENAI_API_KEY = "your-api-key"
 Run the backend on one recording:
 
 ```powershell
-python -m sleep_scoring_chatgpt.run_inference_chatgpt .\path\to\recording.mat .\chatgpt_preview_outputs\recording --reasoning-effort medium --refinement-mode fixed_sections --fixed-section-count 4
+python -m sleep_scoring_chatgpt.run_inference_chatgpt .\path\to\recording.mat .\chatgpt_preview_outputs\recording --reasoning-effort medium --inference-mode fixed_windows
 ```
 
 Or use the installed script:
@@ -59,12 +64,12 @@ A typical run writes:
 - `--model`: OpenAI model name. Default is `gpt-5.4`.
 - `--reasoning-effort`: one of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`.
 - `--confidence-threshold`: minimum accepted segment confidence in `[0, 1]`.
-- `--refinement-mode`: `none`, `adaptive`, or `fixed_sections`.
-- `--fixed-section-count`: number of fixed zoom sections when using `fixed_sections`.
+- `--inference-mode`: `overview_only` or `fixed_windows`.
 - `--vision-figure-mode`: `focused` or `full`.
-- `--use-overview-pass`: add a full-recording overview pass before zoomed scoring.
 - `--use-reference-examples`: attach the bundled reference example pack.
 - `--no-thoughts`: disable the saved thought trace file.
+
+The fixed zoom-window duration used by `fixed_windows` is an internal setting and is currently one hour.
 
 ## Input expectations
 

@@ -8,15 +8,22 @@ Prepend new session notes to the top of this file.
 
 - Removed the leftover app-style `assets/` nesting from the packaged reference examples.
 - Moved the bundled reference-example pack to `sleep_scoring_chatgpt/sleep_scoring_examples/`.
+- Simplified inference configuration to two explicit modes:
+  - `overview_only`
+  - `fixed_windows`
+- Replaced equal-quarter refinement with fixed one-hour zoom windows so target window scale stays aligned with the bundled examples while using a simpler clock-based duration.
+- Matched reference-example packaging to the active inference mode:
+  - overview mode sends only the overview example,
+  - fixed-window mode sends only the zoom-window examples.
 - Removed the temporary compatibility wrapper modules at:
   - `sleep_scoring_chatgpt/chatgpt_inference.py`
   - `sleep_scoring_chatgpt/chatgpt_preview.py`
   - `sleep_scoring_chatgpt/make_figure_dev.py`
-- Converted `groundtruth_reasons_model_friendly.txt` into structured `groundtruth_reasons_model_friendly.json`.
+- Converted `groundtruth_reasons_model_friendly.txt` into structured `groundtruth_reasons.json`.
 - Updated the inference loader to read structured reference-example JSON and format the model-facing calibration prompt from it.
 - Generated the missing bundled reference PNGs from `35_app13_groundtruth.mat`:
   - overview image,
-  - four refinement-window images.
+  - refinement-window images aligned with the current fixed-window example layout.
 - Added ignore-rule exceptions so the committed reference JSON/PNG files are tracked even though generic `*.json` and `*.png` outputs stay ignored.
 - Added a regression test for reference-example prompt assembly in `tests/test_inference_chatgpt.py`.
 

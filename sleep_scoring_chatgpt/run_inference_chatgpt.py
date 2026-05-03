@@ -14,6 +14,13 @@ from scipy.io import loadmat
 
 import sleep_scoring_chatgpt.inference_chatgpt as chatgpt_inference
 from sleep_scoring_chatgpt.chatgpt_tools import capture_overview_snapshot, capture_zoom_snapshot
+from sleep_scoring_chatgpt.config import (
+    CHATGPT_CONFIDENCE_THRESHOLD,
+    CHATGPT_INFERENCE_MODE,
+    CHATGPT_REASONING_EFFORT,
+    CHATGPT_SHOW_THOUGHTS,
+    CHATGPT_USE_REFERENCE_EXAMPLES,
+)
 
 DEFAULT_MODEL_OUTPUT_FILENAME = "model_output.json"
 DEFAULT_PREDICTION_IMAGE_PREFIX = "prediction_"
@@ -123,17 +130,19 @@ def run_chatgpt_preview(
     model_name: str = chatgpt_inference.DEFAULT_CHATGPT_MODEL,
     confidence_threshold: float | None = None,
     show_thoughts: bool = True,
-    refinement_mode: str | None = None,
-    fixed_refinement_section_count: int | None = None,
+    inference_mode: str | None = None,
     vision_figure_mode: str | None = None,
     reasoning_effort: str | None = None,
-    use_overview_pass: bool | None = None,
     use_reference_examples: bool | None = None,
     reference_examples_dir: str | Path = chatgpt_inference.DEFAULT_REFERENCE_EXAMPLES_DIR,
     guidance_prompt_path: str | Path = chatgpt_inference.DEFAULT_GUIDANCE_PROMPT_PATH,
 ) -> dict[str, Any]:
     """
     Run ChatGPT scoring on a .mat file without opening the app or saving scores to it.
+
+    The high-level inference flow is intentionally limited to:
+    - ``overview_only`` for one full-recording image
+    - ``fixed_windows`` for a sequence of fixed-duration zoom windows
 
     The output directory receives:
     - the PNG images sent to the model,
@@ -163,11 +172,9 @@ def run_chatgpt_preview(
         client=client,
         confidence_threshold=confidence_threshold,
         show_thoughts=show_thoughts,
-        refinement_mode=refinement_mode,
-        fixed_refinement_section_count=fixed_refinement_section_count,
+        inference_mode=inference_mode,
         vision_figure_mode=vision_figure_mode,
         reasoning_effort=reasoning_effort,
-        use_overview_pass=use_overview_pass,
         use_reference_examples=use_reference_examples,
         reference_examples_dir=reference_examples_dir,
         guidance_prompt_path=guidance_prompt_path,
@@ -228,10 +235,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default=chatgpt_inference.DEFAULT_CHATGPT_MODEL)
     parser.add_argument("--reasoning-effort", default=None)
     parser.add_argument("--confidence-threshold", type=float, default=None)
-    parser.add_argument("--refinement-mode", default=None)
-    parser.add_argument("--fixed-section-count", type=int, default=None)
+    parser.add_argument(
+        "--inference-mode",
+        default=None,
+        help="One of 'overview_only' or 'fixed_windows'.",
+    )
     parser.add_argument("--vision-figure-mode", default=None)
-    parser.add_argument("--use-overview-pass", action="store_true")
     parser.add_argument("--use-reference-examples", action="store_true")
     parser.add_argument("--no-thoughts", action="store_true")
     return parser
@@ -246,11 +255,9 @@ def main(argv: list[str] | None = None) -> int:
         model_name=args.model,
         confidence_threshold=args.confidence_threshold,
         show_thoughts=not args.no_thoughts,
-        refinement_mode=args.refinement_mode,
-        fixed_refinement_section_count=args.fixed_section_count,
+        inference_mode=args.inference_mode,
         vision_figure_mode=args.vision_figure_mode,
         reasoning_effort=args.reasoning_effort,
-        use_overview_pass=True if args.use_overview_pass else None,
         use_reference_examples=True if args.use_reference_examples else None,
     )
     print(
@@ -277,15 +284,29 @@ if __name__ == "__main__":
     # Spyder-friendly direct-run settings. Edit these values, then press Run.
     mat_path = PROJECT_ROOT / "user_test_files" / "830.mat"
     output_dir = PROJECT_ROOT / "chatgpt_preview_outputs" / mat_path.stem
+
+    # Model snapshot to call for this direct-run experiment.
     model_name = chatgpt_inference.DEFAULT_CHATGPT_MODEL
-    reasoning_effort = None
-    confidence_threshold = None
-    show_thoughts = True
-    refinement_mode = None
-    fixed_refinement_section_count = None
+
+    # Responses API reasoning effort. Matches the current config default.
+    reasoning_effort = CHATGPT_REASONING_EFFORT
+
+    # Minimum accepted segment confidence in [0, 1].
+    confidence_threshold = CHATGPT_CONFIDENCE_THRESHOLD
+
+    # Whether to save the per-call thought trace markdown file.
+    show_thoughts = CHATGPT_SHOW_THOUGHTS
+
+    # High-level scoring flow:
+    # - "overview_only": one full-session image
+    # - "fixed_windows": one-hour zoom windows
+    inference_mode = CHATGPT_INFERENCE_MODE
+
+    # Model-facing figure layout. ``None`` falls back to the focused default.
     vision_figure_mode = None
-    use_overview_pass = None
-    use_reference_examples = None
+
+    # Whether to prepend the bundled reference-example pack.
+    use_reference_examples = CHATGPT_USE_REFERENCE_EXAMPLES
 
     result = run_chatgpt_preview(
         mat_path=mat_path,
@@ -293,11 +314,9 @@ if __name__ == "__main__":
         model_name=model_name,
         confidence_threshold=confidence_threshold,
         show_thoughts=show_thoughts,
-        refinement_mode=refinement_mode,
-        fixed_refinement_section_count=fixed_refinement_section_count,
+        inference_mode=inference_mode,
         vision_figure_mode=vision_figure_mode,
         reasoning_effort=reasoning_effort,
-        use_overview_pass=use_overview_pass,
         use_reference_examples=use_reference_examples,
     )
     print("ChatGPT preview complete.")

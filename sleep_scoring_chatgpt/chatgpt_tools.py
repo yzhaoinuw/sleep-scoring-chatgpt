@@ -299,7 +299,7 @@ def capture_overview_snapshot(
     output_path: str | Path,
 ) -> Path:
     """
-    Save a full-session visualization snapshot for the first coarse pass.
+    Save a full-session visualization snapshot for overview-only scoring.
 
     Suggested implementation guidelines:
     - Use a fixed export size so prompts always see the same layout.

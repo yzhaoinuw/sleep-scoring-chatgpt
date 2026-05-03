@@ -7,7 +7,7 @@
     "Brief `Wake` bouts immediately after `REM` are intentionally called out as post-`REM` wake bridges. Do not jump directly from a clear `REM` bout to `NREM` when a brief `Wake` bridge is visible."
   ],
   "sections": {
-    "0-2575 s": [
+    "0-3600 s": [
       {
         "index": "01",
         "state": "Wake",
@@ -66,7 +66,7 @@
         "index": "10",
         "state": "REM",
         "timing": "1700-1750 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "11",
@@ -78,16 +78,14 @@
         "index": "12",
         "state": "REM",
         "timing": "2100-2250 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "13",
         "state": "Wake",
         "timing": "immediately after 2250 s",
         "reason": "brief post-`REM` wake bridge."
-      }
-    ],
-    "2575-5150 s": [
+      },
       {
         "index": "14",
         "state": "Wake",
@@ -98,14 +96,16 @@
         "index": "15",
         "state": "Wake",
         "timing": "2845-3155 s",
-        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, but without a large NE rise."
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, but without a large pronounced V-shaped valley in NE."
       },
       {
         "index": "16",
         "state": "REM",
         "timing": "3550-3620 s",
-        "reason": "NE shows a large valley at the same time."
-      },
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
+      }
+    ],
+    "3600-7200 s": [
       {
         "index": "17",
         "state": "Wake",
@@ -135,14 +135,12 @@
         "state": "Wake",
         "timing": "approx 5105 s",
         "reason": "brief wake interruption. Cue: narrow cooler vertical strip interrupting the warmer 0-5 Hz `NREM` band."
-      }
-    ],
-    "5150-7725 s": [
+      },
       {
         "index": "22",
         "state": "REM",
         "timing": "5320-5400 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "23",
@@ -154,7 +152,7 @@
         "index": "24",
         "state": "REM",
         "timing": "5800-5845 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "25",
@@ -178,19 +176,21 @@
         "index": "28",
         "state": "REM",
         "timing": "6550-6700 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "29",
         "state": "Wake",
         "timing": "immediately after 6700 s",
         "reason": "brief post-`REM` wake bridge."
-      },
+      }
+    ],
+    "7200-10300 s": [
       {
         "index": "30",
         "state": "REM",
         "timing": "7260-7310 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "31",
@@ -214,10 +214,8 @@
         "index": "34",
         "state": "Wake",
         "timing": "7710-8170 s",
-        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, without a pronounced REM-like NE valley."
-      }
-    ],
-    "7725-10300 s": [
+        "reason": "broader wake bout. Cue: clear fading of the warmer 0-5 Hz band, without a pronounced valley in NE."
+      },
       {
         "index": "35",
         "state": "Wake",
@@ -234,7 +232,7 @@
         "index": "37",
         "state": "REM",
         "timing": "9130-9170 s",
-        "reason": "while NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "38",
@@ -252,7 +250,7 @@
         "index": "40",
         "state": "REM",
         "timing": "9385-9415 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "41",
@@ -270,7 +268,7 @@
         "index": "43",
         "state": "REM",
         "timing": "9700-9725 s",
-        "reason": "NE shows a large valley at the same time."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "44",
@@ -282,7 +280,7 @@
         "index": "45",
         "state": "REM",
         "timing": "9835-9865 s",
-        "reason": "NE shows a large valley."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "46",
@@ -294,7 +292,7 @@
         "index": "47",
         "state": "REM",
         "timing": "10100-10125 s",
-        "reason": "NE shows a large valley."
+        "reason": "REM bout. Cue: wake-like interruption plus a pronounced V-shaped NE valley, consistent with the scoring guidance."
       },
       {
         "index": "48",

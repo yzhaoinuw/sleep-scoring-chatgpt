@@ -8,7 +8,7 @@ This module implements the ChatGPT scoring flow:
 2. Send the guidance prompt plus snapshot images to the Responses API.
 3. Parse structured Wake/REM segments from the model output.
 4. Write back model-returned segments.
-5. Optionally skip the overview pass and score fixed zoomed sections only.
+5. Run either a single overview pass or fixed-duration zoom windows.
 """
 
 from __future__ import annotations
@@ -31,12 +31,11 @@ from sleep_scoring_chatgpt.chatgpt_tools import (
     capture_zoom_snapshot,
 )
 from sleep_scoring_chatgpt.config import (
-    CHATGPT_FIXED_REFINEMENT_SECTION_COUNT,
+    CHATGPT_INFERENCE_MODE,
     CHATGPT_MODEL,
+    CHATGPT_REFINEMENT_WINDOW_SECONDS,
     CHATGPT_REASONING_EFFORT,
-    CHATGPT_REFINEMENT_MODE,
     CHATGPT_SHOW_THOUGHTS,
-    CHATGPT_USE_OVERVIEW_PASS,
     CHATGPT_USE_REFERENCE_EXAMPLES,
 )
 from sleep_scoring_chatgpt.make_figure_chatgpt import make_chatgpt_vision_figure
@@ -49,14 +48,11 @@ DEFAULT_REFERENCE_EXAMPLES_DIR = Path(__file__).resolve().parent / "sleep_scorin
 DEFAULT_CONFIDENCE_THRESHOLD = 0.0
 DEFAULT_REASONING_EFFORT = CHATGPT_REASONING_EFFORT
 DEFAULT_SHOW_THOUGHTS = CHATGPT_SHOW_THOUGHTS
-DEFAULT_REFINEMENT_MODE = CHATGPT_REFINEMENT_MODE
-DEFAULT_FIXED_REFINEMENT_SECTION_COUNT = CHATGPT_FIXED_REFINEMENT_SECTION_COUNT
-DEFAULT_USE_OVERVIEW_PASS = CHATGPT_USE_OVERVIEW_PASS
+DEFAULT_INFERENCE_MODE = CHATGPT_INFERENCE_MODE
+DEFAULT_REFINEMENT_WINDOW_SECONDS = CHATGPT_REFINEMENT_WINDOW_SECONDS
 DEFAULT_USE_REFERENCE_EXAMPLES = CHATGPT_USE_REFERENCE_EXAMPLES
 DEFAULT_VISION_FIGURE_MODE = "focused"
 OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY"
-DEFAULT_REFINEMENT_MARGIN_S = 15
-DEFAULT_MAX_REFINEMENT_INTERVALS = 6
 DEFAULT_NREM_CONFIDENCE = 1.0
 MODEL_PRICING_USD_PER_1M_TOKENS = {
     "gpt-5.4": {
@@ -75,7 +71,7 @@ MODEL_PRICING_USD_PER_1M_TOKENS = {
         "output": 1.25,
     },
 }
-REFERENCE_EXAMPLE_DATA_FILENAME = "groundtruth_reasons_model_friendly.json"
+REFERENCE_EXAMPLE_DATA_FILENAME = "groundtruth_reasons.json"
 REFERENCE_EXAMPLE_IMAGE_SPECS = [
     (
         "35_app13_groundtruth_overview_0s_10300s.png",
@@ -83,24 +79,19 @@ REFERENCE_EXAMPLE_IMAGE_SPECS = [
         "35_app13 reference overview",
     ),
     (
-        "35_app13_groundtruth_refinement_1_0s_2575s.png",
-        "0-2575 s",
-        "35_app13 reference zoom 0-2575 s",
+        "35_app13_groundtruth_refinement_1_0s_3600s.png",
+        "0-3600 s",
+        "35_app13 reference zoom 0-3600 s",
     ),
     (
-        "35_app13_groundtruth_refinement_2_2575s_5150s.png",
-        "2575-5150 s",
-        "35_app13 reference zoom 2575-5150 s",
+        "35_app13_groundtruth_refinement_2_3600s_7200s.png",
+        "3600-7200 s",
+        "35_app13 reference zoom 3600-7200 s",
     ),
     (
-        "35_app13_groundtruth_refinement_3_5150s_7725s.png",
-        "5150-7725 s",
-        "35_app13 reference zoom 5150-7725 s",
-    ),
-    (
-        "35_app13_groundtruth_refinement_4_7725s_10300s.png",
-        "7725-10300 s",
-        "35_app13 reference zoom 7725-10300 s",
+        "35_app13_groundtruth_refinement_3_7200s_10300s.png",
+        "7200-10300 s",
+        "35_app13 reference zoom 7200-10300 s",
     ),
 ]
 
@@ -229,32 +220,36 @@ def _normalize_show_thoughts(show_thoughts: bool | None) -> bool:
     return bool(show_thoughts)
 
 
-def _normalize_refinement_mode(refinement_mode: str | None) -> str:
-    """Return the requested refinement mode for this inference run."""
-    raw_mode = DEFAULT_REFINEMENT_MODE if refinement_mode is None else refinement_mode
+def _normalize_inference_mode(inference_mode: str | None) -> str:
+    """Return the requested high-level inference mode for this run."""
+    raw_mode = DEFAULT_INFERENCE_MODE if inference_mode is None else inference_mode
     normalized_mode = str(raw_mode).strip().lower()
     aliases = {
-        "disabled": "none",
-        "off": "none",
-        "overview_only": "none",
-        "fixed": "fixed_sections",
+        "overview": "overview_only",
+        "overview-pass": "overview_only",
+        "none": "overview_only",
+        "off": "overview_only",
+        "fixed": "fixed_windows",
+        "fixed_sections": "fixed_windows",
+        "refinement_only": "fixed_windows",
+        "zoom_only": "fixed_windows",
+        "adaptive": "fixed_windows",
     }
     normalized_mode = aliases.get(normalized_mode, normalized_mode)
 
-    if normalized_mode not in {"none", "adaptive", "fixed_sections"}:
-        raise ValueError("refinement_mode must be one of 'none', 'adaptive', or 'fixed_sections'.")
+    if normalized_mode not in {"overview_only", "fixed_windows"}:
+        raise ValueError("inference_mode must be one of 'overview_only' or 'fixed_windows'.")
 
     return normalized_mode
 
 
-def _normalize_fixed_refinement_section_count(section_count: int | None) -> int:
-    """Return the number of fixed broad refinement sections to use."""
-    raw_count = DEFAULT_FIXED_REFINEMENT_SECTION_COUNT if section_count is None else section_count
-    normalized_count = int(raw_count)
-    if normalized_count < 1:
-        raise ValueError("fixed_refinement_section_count must be at least 1.")
+def _get_refinement_window_seconds() -> int:
+    """Return the internal fixed zoom-window duration used by fixed-window scoring."""
+    normalized_window_seconds = int(DEFAULT_REFINEMENT_WINDOW_SECONDS)
+    if normalized_window_seconds < 1:
+        raise ValueError("refinement_window_seconds must be at least 1.")
 
-    return normalized_count
+    return normalized_window_seconds
 
 
 def _normalize_reasoning_effort(reasoning_effort: str | None) -> str:
@@ -277,14 +272,6 @@ def _normalize_use_reference_examples(use_reference_examples: bool | None) -> bo
         return bool(DEFAULT_USE_REFERENCE_EXAMPLES)
 
     return bool(use_reference_examples)
-
-
-def _normalize_use_overview_pass(use_overview_pass: bool | None) -> bool:
-    """Return whether inference should begin with the full-recording overview pass."""
-    if use_overview_pass is None:
-        return bool(DEFAULT_USE_OVERVIEW_PASS)
-
-    return bool(use_overview_pass)
 
 
 def _normalize_vision_figure_mode(vision_figure_mode: str | None) -> str:
@@ -707,6 +694,9 @@ def _format_reference_section_notes(section_entries: list[dict[str, Any]]) -> st
 
 def _build_reference_examples_message(
     reference_examples_dir: str | Path = DEFAULT_REFERENCE_EXAMPLES_DIR,
+    *,
+    include_overview: bool = True,
+    include_refinement: bool = True,
 ) -> dict[str, Any] | None:
     """Return a single user message containing the ground-truth reference pack."""
     reference_examples_dir = Path(reference_examples_dir)
@@ -734,6 +724,11 @@ def _build_reference_examples_message(
     ]
 
     for filename, label, description in REFERENCE_EXAMPLE_IMAGE_SPECS:
+        if label == "overview" and not include_overview:
+            continue
+        if label != "overview" and not include_refinement:
+            continue
+
         image_path = reference_examples_dir / filename
         if not image_path.exists():
             continue
@@ -807,60 +802,31 @@ def _build_coarse_request_input(
     return request_input
 
 
-def _build_refinement_request_input(
-    guidance_prompt: str,
-    image_data_url: str,
-    interval_start_s: float,
-    interval_end_s: float,
-    refinement_reason: str,
-) -> list[dict[str, Any]]:
-    """Build a bounded prompt for a local refinement pass."""
-    metadata_prompt = (
-        "sleep score the figure based on the provided guidance to the best of your judgment.\n"
-        "If there truly are some parts that you cannot resolve, tell me the reasons "
-        "that prevent you from making the call."
-    )
-
-    return [
-        {
-            "role": "system",
-            "content": guidance_prompt,
-        },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "input_text",
-                    "text": metadata_prompt,
-                },
-                {
-                    "type": "input_image",
-                    "image_url": image_data_url,
-                },
-            ],
-        },
-    ]
-
-
 def _build_zoom_section_request_input(
     guidance_prompt: str,
     image_data_url: str,
     interval_start_s: float,
     interval_end_s: float,
     section_reason: str,
+    reference_examples_message: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Build a prompt for scoring one zoomed section without an overview pass."""
+    """Build a prompt for scoring one fixed-duration zoom window."""
     metadata_prompt = (
         "sleep score the figure based on the provided guidance to the best of your judgment.\n"
         "If there truly are some parts that you cannot resolve, tell me the reasons "
         "that prevent you from making the call."
     )
 
-    return [
+    request_input = [
         {
             "role": "system",
             "content": guidance_prompt,
         },
+    ]
+    if reference_examples_message is not None:
+        request_input.append(reference_examples_message)
+
+    request_input.append(
         {
             "role": "user",
             "content": [
@@ -873,8 +839,10 @@ def _build_zoom_section_request_input(
                     "image_url": image_data_url,
                 },
             ],
-        },
-    ]
+        }
+    )
+
+    return request_input
 
 
 def _extract_response_payload(response: Any) -> dict[str, Any]:
@@ -1007,92 +975,15 @@ def _fill_interval_with_stage(
     return filled_predictions, filled_confidence
 
 
-def _merge_refinement_candidates(
-    candidates: list[dict[str, Any]],
-    max_intervals: int,
-) -> list[dict[str, Any]]:
-    """Merge overlapping refinement windows so the second pass stays bounded."""
-    if not candidates:
-        return []
-
-    sorted_candidates = sorted(
-        candidates,
-        key=lambda candidate: (candidate["start_idx"], candidate["end_idx"]),
-    )
-
-    merged_candidates = []
-    for candidate in sorted_candidates:
-        if not merged_candidates or candidate["start_idx"] > merged_candidates[-1]["end_idx"]:
-            merged_candidates.append(
-                {
-                    "start_idx": candidate["start_idx"],
-                    "end_idx": candidate["end_idx"],
-                    "reasons": [candidate["reason"]],
-                }
-            )
-            continue
-
-        merged_candidates[-1]["end_idx"] = max(
-            merged_candidates[-1]["end_idx"],
-            candidate["end_idx"],
-        )
-        merged_candidates[-1]["reasons"].append(candidate["reason"])
-
-    normalized_candidates = []
-    for candidate in merged_candidates[:max_intervals]:
-        unique_reasons = list(dict.fromkeys(reason for reason in candidate["reasons"] if reason))
-        normalized_candidates.append(
-            {
-                "start_idx": candidate["start_idx"],
-                "end_idx": candidate["end_idx"],
-                "reason": "; ".join(unique_reasons) or "local ambiguity",
-            }
-        )
-
-    return normalized_candidates
-
-
-def _build_refinement_candidates(
-    bouts: list[dict[str, Any]],
-    uncertain_intervals: list[dict[str, Any]],
+def _build_fixed_window_refinement_candidates(
     duration_s: int,
-    confidence_threshold: float,
-    transition_margin_s: int = DEFAULT_REFINEMENT_MARGIN_S,
-    max_intervals: int = DEFAULT_MAX_REFINEMENT_INTERVALS,
+    window_seconds: int,
 ) -> list[dict[str, Any]]:
-    """Select bounded local intervals for zoomed follow-up refinement."""
+    """Split the recording into fixed-duration refinement windows."""
     candidates = []
-
-    for interval in uncertain_intervals:
-        candidates.append(
-            {
-                "start_idx": interval["start_idx"],
-                "end_idx": interval["end_idx"],
-                "reason": interval["reason"] or "coarse-pass uncertainty",
-            }
-        )
-
-    for bout in bouts:
-        if bout["confidence"] >= confidence_threshold:
-            continue
-
-        candidates.append(
-            {
-                "start_idx": bout["start_idx"],
-                "end_idx": bout["end_idx"],
-                "reason": (
-                    f"low-confidence {bout['state']} bout from coarse pass "
-                    f"({bout['confidence']:.2f})"
-                ),
-            }
-        )
-
-    for previous_bout, next_bout in zip(bouts, bouts[1:]):
-        if previous_bout["state"] == next_bout["state"]:
-            continue
-
-        start_idx = max(0, previous_bout["end_idx"] - transition_margin_s)
-        end_idx = min(duration_s, next_bout["start_idx"] + transition_margin_s)
+    window_index = 0
+    for start_idx in range(0, duration_s, window_seconds):
+        end_idx = min(duration_s, start_idx + window_seconds)
         if end_idx <= start_idx:
             continue
 
@@ -1101,34 +992,11 @@ def _build_refinement_candidates(
                 "start_idx": start_idx,
                 "end_idx": end_idx,
                 "reason": (
-                    "transition-heavy boundary between "
-                    f"{previous_bout['state']} and {next_bout['state']}"
+                    f"fixed {window_seconds}-second refinement window {window_index + 1}"
                 ),
             }
         )
-
-    return _merge_refinement_candidates(candidates, max_intervals=max_intervals)
-
-
-def _build_fixed_section_refinement_candidates(
-    duration_s: int,
-    section_count: int,
-) -> list[dict[str, Any]]:
-    """Split the recording into a small number of broad fixed refinement windows."""
-    candidates = []
-    for section_index in range(section_count):
-        start_idx = (section_index * duration_s) // section_count
-        end_idx = ((section_index + 1) * duration_s) // section_count
-        if end_idx <= start_idx:
-            continue
-
-        candidates.append(
-            {
-                "start_idx": start_idx,
-                "end_idx": end_idx,
-                "reason": f"fixed broad section {section_index + 1} of {section_count}",
-            }
-        )
+        window_index += 1
 
     return candidates
 
@@ -1196,7 +1064,7 @@ def _request_structured_scoring(
     return payload
 
 
-def _run_refinement_pass(
+def _run_fixed_window_pass(
     *,
     mat: dict[str, Any],
     figure: Any,
@@ -1209,39 +1077,26 @@ def _run_refinement_pass(
     duration_s: int,
     current_predictions: np.ndarray,
     current_confidence: np.ndarray,
-    coarse_bouts: list[dict[str, Any]],
-    coarse_uncertain_intervals: list[dict[str, Any]],
     confidence_threshold: float,
-    refinement_mode: str,
-    fixed_refinement_section_count: int,
+    refinement_window_seconds: int,
     reasoning_effort: str,
-    zoom_section_only: bool = False,
+    reference_examples_message: dict[str, Any] | None = None,
     trace_logger: _TraceLogger | None = None,
     artifact_log: list[dict[str, Any]] | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Run zoomed local follow-up requests for ambiguous or transition-heavy regions."""
-    if refinement_mode == "none":
-        refinement_candidates = []
-    elif refinement_mode == "fixed_sections":
-        refinement_candidates = _build_fixed_section_refinement_candidates(
-            duration_s=duration_s,
-            section_count=fixed_refinement_section_count,
-        )
-    else:
-        refinement_candidates = _build_refinement_candidates(
-            bouts=coarse_bouts,
-            uncertain_intervals=coarse_uncertain_intervals,
-            duration_s=duration_s,
-            confidence_threshold=confidence_threshold,
-        )
+    """Run fixed-duration zoom-window scoring across the target recording."""
+    refinement_candidates = _build_fixed_window_refinement_candidates(
+        duration_s=duration_s,
+        window_seconds=refinement_window_seconds,
+    )
     predictions = current_predictions.copy()
     confidence = current_confidence.copy()
-    trace_prefix = "Zoom Section" if zoom_section_only else "Refinement"
+    trace_prefix = "Fixed Window"
 
     if trace_logger is not None:
         trace_logger.add_text_block(
             f"{trace_prefix} Mode",
-            [f"- {refinement_mode}"],
+            [f"- fixed_windows ({refinement_window_seconds}s windows)"],
         )
         trace_logger.add_text_block(
             f"{trace_prefix} Windows",
@@ -1259,15 +1114,14 @@ def _run_refinement_pass(
     for candidate_index, candidate in enumerate(refinement_candidates):
         interval_start_s = recording_start_s + candidate["start_idx"]
         interval_end_s = recording_start_s + candidate["end_idx"]
-        if zoom_section_only:
-            predictions, confidence = _fill_interval_with_stage(
-                predictions=predictions,
-                confidence=confidence,
-                start_idx=candidate["start_idx"],
-                end_idx=candidate["end_idx"],
-                state="NREM",
-                confidence_value=DEFAULT_NREM_CONFIDENCE,
-            )
+        predictions, confidence = _fill_interval_with_stage(
+            predictions=predictions,
+            confidence=confidence,
+            start_idx=candidate["start_idx"],
+            end_idx=candidate["end_idx"],
+            state="NREM",
+            confidence_value=DEFAULT_NREM_CONFIDENCE,
+        )
         try:
             _set_figure_title(
                 figure,
@@ -1300,14 +1154,7 @@ def _run_refinement_pass(
                     interval_start_s=interval_start_s,
                     interval_end_s=interval_end_s,
                     section_reason=candidate["reason"],
-                )
-                if zoom_section_only
-                else _build_refinement_request_input(
-                    guidance_prompt=guidance_prompt,
-                    image_data_url=image_data_url,
-                    interval_start_s=interval_start_s,
-                    interval_end_s=interval_end_s,
-                    refinement_reason=candidate["reason"],
+                    reference_examples_message=reference_examples_message,
                 )
             )
             payload = _request_structured_scoring(
@@ -1321,7 +1168,7 @@ def _run_refinement_pass(
             artifact_record = _record_model_call_artifact(
                 artifact_log,
                 label=f"{trace_prefix} {candidate_index}",
-                kind="zoom_section" if zoom_section_only else "refinement",
+                kind="zoom_section",
                 snapshot_path=snapshot_path,
                 start_s=interval_start_s,
                 end_s=interval_end_s,
@@ -1369,11 +1216,9 @@ def infer(
     client: Any = None,
     confidence_threshold: float | None = None,
     show_thoughts: bool | None = None,
-    refinement_mode: str | None = None,
-    fixed_refinement_section_count: int | None = None,
+    inference_mode: str | None = None,
     vision_figure_mode: str | None = None,
     reasoning_effort: str | None = None,
-    use_overview_pass: bool | None = None,
     use_reference_examples: bool | None = None,
     reference_examples_dir: str | Path = DEFAULT_REFERENCE_EXAMPLES_DIR,
     guidance_prompt_path: str | Path = DEFAULT_GUIDANCE_PROMPT_PATH,
@@ -1385,18 +1230,17 @@ def infer(
     If the OpenAI client, API key, snapshot export, or structured response
     parsing is unavailable, the function falls back to the current in-memory
     scores so the app remains usable while the beta path is still being
-    hardened.
+    hardened. The high-level inference flow is intentionally limited to:
+    one full-recording overview image, or a sequence of fixed-duration zoom
+    windows aligned with the reference examples.
     """
     base_scores = get_padded_sleep_scores(mat).astype(float)
     fallback_confidence = np.full(base_scores.shape, np.nan, dtype=float)
     threshold = _normalize_confidence_threshold(confidence_threshold)
-    normalized_refinement_mode = _normalize_refinement_mode(refinement_mode)
-    normalized_fixed_refinement_section_count = _normalize_fixed_refinement_section_count(
-        fixed_refinement_section_count
-    )
+    normalized_inference_mode = _normalize_inference_mode(inference_mode)
+    normalized_refinement_window_seconds = _get_refinement_window_seconds()
     normalized_vision_figure_mode = _normalize_vision_figure_mode(vision_figure_mode)
     normalized_reasoning_effort = _normalize_reasoning_effort(reasoning_effort)
-    normalized_use_overview_pass = _normalize_use_overview_pass(use_overview_pass)
     normalized_use_reference_examples = _normalize_use_reference_examples(use_reference_examples)
     recording_label = _get_recording_label(mat)
     snapshot_dir = Path(snapshot_dir)
@@ -1411,10 +1255,10 @@ def infer(
             f"- timestamp: {datetime.now().isoformat(timespec='seconds')}",
             f"- model: {model_name}",
             f"- confidence_threshold: {threshold:.2f}",
-            f"- refinement_mode: {normalized_refinement_mode}",
+            f"- inference_mode: {normalized_inference_mode}",
+            f"- refinement_window_seconds: {normalized_refinement_window_seconds}",
             f"- vision_figure_mode: {normalized_vision_figure_mode}",
             f"- reasoning_effort: {normalized_reasoning_effort}",
-            f"- overview_pass: {normalized_use_overview_pass}",
             f"- reference_examples: {normalized_use_reference_examples}",
         ],
     )
@@ -1431,8 +1275,12 @@ def infer(
     try:
         guidance_prompt = _load_guidance_prompt(guidance_prompt_path)
         reference_examples_message = None
-        if normalized_use_overview_pass and normalized_use_reference_examples:
-            reference_examples_message = _build_reference_examples_message(reference_examples_dir)
+        if normalized_use_reference_examples:
+            reference_examples_message = _build_reference_examples_message(
+                reference_examples_dir,
+                include_overview=normalized_inference_mode == "overview_only",
+                include_refinement=normalized_inference_mode == "fixed_windows",
+            )
         recording_start_s, duration_s, recording_end_s = _get_recording_window(mat)
         figure = _build_model_figure(
             mat=mat,
@@ -1443,7 +1291,7 @@ def infer(
             ),
             vision_figure_mode=normalized_vision_figure_mode,
         )
-        if normalized_use_overview_pass:
+        if normalized_inference_mode == "overview_only":
             snapshot_path = _build_snapshot_path(
                 snapshot_dir,
                 recording_label,
@@ -1465,11 +1313,11 @@ def infer(
                 ),
                 reasoning_effort=normalized_reasoning_effort,
                 trace_logger=trace_logger,
-                trace_label="Coarse Pass",
+                trace_label="Overview Pass",
             )
             artifact_record = _record_model_call_artifact(
                 artifact_log,
-                label="Coarse Pass",
+                label="Overview Pass",
                 kind="overview",
                 snapshot_path=snapshot_path,
                 start_s=recording_start_s,
@@ -1494,37 +1342,36 @@ def infer(
                 segments=coarse_segments,
                 confidence_threshold=threshold,
             )
+            trace_logger.add_text_block(
+                "Fixed Window Pass",
+                ["- skipped; inference_mode is overview_only."],
+            )
         else:
-            coarse_segments = []
-            coarse_uncertain_intervals = []
             predictions = base_scores.copy()
             confidence = fallback_confidence.copy()
             trace_logger.add_text_block(
-                "Coarse Pass",
-                ["- skipped; scoring fixed zoomed sections only."],
+                "Overview Pass",
+                ["- skipped; inference_mode is fixed_windows."],
             )
-        predictions, confidence = _run_refinement_pass(
-            mat=mat,
-            figure=figure,
-            snapshot_dir=snapshot_dir,
-            client=client,
-            model_name=model_name,
-            guidance_prompt=guidance_prompt,
-            recording_label=recording_label,
-            recording_start_s=recording_start_s,
-            duration_s=duration_s,
-            current_predictions=predictions,
-            current_confidence=confidence,
-            coarse_bouts=coarse_segments,
-            coarse_uncertain_intervals=coarse_uncertain_intervals,
-            confidence_threshold=threshold,
-            refinement_mode=normalized_refinement_mode,
-            fixed_refinement_section_count=normalized_fixed_refinement_section_count,
-            reasoning_effort=normalized_reasoning_effort,
-            zoom_section_only=not normalized_use_overview_pass,
-            trace_logger=trace_logger,
-            artifact_log=artifact_log,
-        )
+            predictions, confidence = _run_fixed_window_pass(
+                mat=mat,
+                figure=figure,
+                snapshot_dir=snapshot_dir,
+                client=client,
+                model_name=model_name,
+                guidance_prompt=guidance_prompt,
+                recording_label=recording_label,
+                recording_start_s=recording_start_s,
+                duration_s=duration_s,
+                current_predictions=predictions,
+                current_confidence=confidence,
+                confidence_threshold=threshold,
+                refinement_window_seconds=normalized_refinement_window_seconds,
+                reasoning_effort=normalized_reasoning_effort,
+                reference_examples_message=reference_examples_message,
+                trace_logger=trace_logger,
+                artifact_log=artifact_log,
+            )
         trace_logger.add_text_block(
             "Final Writeback",
             [
@@ -1556,11 +1403,9 @@ def infer_with_artifacts(
     client: Any = None,
     confidence_threshold: float | None = None,
     show_thoughts: bool | None = None,
-    refinement_mode: str | None = None,
-    fixed_refinement_section_count: int | None = None,
+    inference_mode: str | None = None,
     vision_figure_mode: str | None = None,
     reasoning_effort: str | None = None,
-    use_overview_pass: bool | None = None,
     use_reference_examples: bool | None = None,
     reference_examples_dir: str | Path = DEFAULT_REFERENCE_EXAMPLES_DIR,
     guidance_prompt_path: str | Path = DEFAULT_GUIDANCE_PROMPT_PATH,
@@ -1578,11 +1423,9 @@ def infer_with_artifacts(
         client=client,
         confidence_threshold=confidence_threshold,
         show_thoughts=show_thoughts,
-        refinement_mode=refinement_mode,
-        fixed_refinement_section_count=fixed_refinement_section_count,
+        inference_mode=inference_mode,
         vision_figure_mode=vision_figure_mode,
         reasoning_effort=reasoning_effort,
-        use_overview_pass=use_overview_pass,
         use_reference_examples=use_reference_examples,
         reference_examples_dir=reference_examples_dir,
         guidance_prompt_path=guidance_prompt_path,
