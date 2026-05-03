@@ -14,13 +14,7 @@ from scipy.io import loadmat
 
 import sleep_scoring_chatgpt.inference_chatgpt as chatgpt_inference
 from sleep_scoring_chatgpt.chatgpt_tools import capture_overview_snapshot, capture_zoom_snapshot
-from sleep_scoring_chatgpt.config import (
-    CHATGPT_CONFIDENCE_THRESHOLD,
-    CHATGPT_INFERENCE_MODE,
-    CHATGPT_REASONING_EFFORT,
-    CHATGPT_SHOW_THOUGHTS,
-    CHATGPT_USE_REFERENCE_EXAMPLES,
-)
+
 
 DEFAULT_MODEL_OUTPUT_FILENAME = "model_output.json"
 DEFAULT_PREDICTION_IMAGE_PREFIX = "prediction_"
@@ -281,32 +275,32 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         raise SystemExit(main())
 
-    # Spyder-friendly direct-run settings. Edit these values, then press Run.
+    # Spyder-friendly direct-run settings. Edit these local overrides, then press Run.
     mat_path = PROJECT_ROOT / "user_test_files" / "830.mat"
     output_dir = PROJECT_ROOT / "chatgpt_preview_outputs" / mat_path.stem
 
     # Model snapshot to call for this direct-run experiment.
-    model_name = chatgpt_inference.DEFAULT_CHATGPT_MODEL
+    model_name = "gpt-5.4"
 
-    # Responses API reasoning effort. Matches the current config default.
-    reasoning_effort = CHATGPT_REASONING_EFFORT
+    # Responses API reasoning effort for this direct-run experiment.
+    reasoning_effort = "medium"
 
-    # Minimum accepted segment confidence in [0, 1].
-    confidence_threshold = CHATGPT_CONFIDENCE_THRESHOLD
+    # Minimum accepted segment confidence in [0, 1] for this direct-run experiment.
+    confidence_threshold = 0.0
 
-    # Whether to save the per-call thought trace markdown file.
-    show_thoughts = CHATGPT_SHOW_THOUGHTS
+    # Whether to save the per-call thought trace markdown file for this run.
+    show_thoughts = True
 
-    # High-level scoring flow:
+    # High-level scoring flow for this direct-run experiment:
     # - "overview_only": one full-session image
     # - "fixed_windows": one-hour zoom windows
-    inference_mode = CHATGPT_INFERENCE_MODE
+    inference_mode = "fixed_windows"
 
-    # Model-facing figure layout. ``None`` falls back to the focused default.
+    # Model-facing figure layout override. ``None`` falls back to the focused default.
     vision_figure_mode = None
 
-    # Whether to prepend the bundled reference-example pack.
-    use_reference_examples = CHATGPT_USE_REFERENCE_EXAMPLES
+    # Whether to prepend the bundled reference-example pack for this run.
+    use_reference_examples = False
 
     result = run_chatgpt_preview(
         mat_path=mat_path,

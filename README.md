@@ -1,6 +1,6 @@
 # sleep-scoring-chatgpt
 
-Standalone backend-only extraction of the ChatGPT sleep-scoring preview workflow from the larger `sleep_scoring` project.
+Standalone backend-only extraction of the ChatGPT sleep-scoring preview workflow from the larger [`sleep_scoring` project (`codex/chatgpt` branch)](https://github.com/yzhaoinuw/sleep_scoring/tree/codex/chatgpt).
 
 ## Overview
 
