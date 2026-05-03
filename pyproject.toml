@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sleep-scoring-chatgpt"
+version = "0.1.0"
+description = "Standalone ChatGPT sleep-scoring preview backend extracted from the sleep_scoring app experiments"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "numpy==2.3.5",
+    "openai>=1.0.0",
+    "plotly>=6.5.0",
+    "plotly-resampler==0.11.0",
+    "scipy==1.16.3",
+    "kaleido>=0.2.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==9.0.2",
+    "pandas==2.3.3",
+]
+
+[project.scripts]
+sleep-scoring-chatgpt = "sleep_scoring_chatgpt.run_inference_chatgpt:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["sleep_scoring_chatgpt*"]
+
+[tool.setuptools.package-data]
+sleep_scoring_chatgpt = [
+    "chatgpt_scoring_guidance.md",
+    "assets/chatgpt_reference_examples/*",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
+tmp_path_retention_policy = "none"
