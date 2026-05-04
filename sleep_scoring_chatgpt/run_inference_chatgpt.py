@@ -294,13 +294,13 @@ if __name__ == "__main__":
     # High-level scoring flow for this direct-run experiment:
     # - "overview_only": one full-session image
     # - "fixed_windows": one-hour zoom windows
-    inference_mode = "overview_only"
+    inference_mode = "fixed_windows"
 
     # Model-facing figure layout override. ``None`` falls back to the focused default.
     vision_figure_mode = None
 
     # Whether to prepend the bundled reference-example pack for this run.
-    use_reference_examples = False
+    use_reference_examples = True
 
     result = run_chatgpt_preview(
         mat_path=mat_path,

@@ -2,6 +2,23 @@
 
 Prepend new session notes to the top of this file.
 
+## 2026-05-04
+
+### Done Today
+
+- Added per-call elapsed request time to the saved thoughts trace.
+- Streamlined the thoughts trace so global settings such as `reasoning_effort` are shown once at the top instead of repeating in every API-usage block.
+- Removed redundant trace sections for:
+  - fixed-window mode restatement,
+  - per-window interval restatement before each API call,
+  - skipped overview/fixed-window branch notes.
+- Updated the focused inference test coverage to assert the new timing line and the reduced repetition in per-call trace blocks.
+
+### Verification
+
+- Ran `C:\Users\yzhao\miniconda3\envs\sleep_scoring_dash3.0\python.exe -m pytest tests\test_inference_chatgpt.py` and confirmed all focused inference tests pass.
+- Ran `C:\Users\yzhao\miniconda3\envs\sleep_scoring_dash3.0\python.exe -m compileall sleep_scoring_chatgpt`.
+
 ## 2026-05-03
 
 ### Done Today

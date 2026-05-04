@@ -8,11 +8,13 @@ import shutil
 import numpy as np
 
 from sleep_scoring_chatgpt.inference_chatgpt import (
+    _TraceLogger,
     REFERENCE_EXAMPLE_DATA_FILENAME,
     REFERENCE_EXAMPLE_IMAGE_SPECS,
     _build_reference_examples_message,
     _build_zoom_section_request_input,
     _load_local_env_file,
+    _request_structured_scoring,
     infer,
 )
 
@@ -202,5 +204,59 @@ def test_overview_only_fills_unlabeled_time_as_nrem(monkeypatch):
 
         assert np.all(predictions == 1)
         assert np.all(confidence == 1.0)
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_request_structured_scoring_logs_elapsed_seconds(monkeypatch):
+    """Thought traces should include per-request elapsed time without re-listing global settings."""
+
+    class _FakeResponses:
+        def create(self, **_kwargs):
+            return object()
+
+    class _FakeClient:
+        responses = _FakeResponses()
+
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._extract_response_payload",
+        lambda _response: {"segments": []},
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._extract_response_usage",
+        lambda _response: None,
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._estimate_response_cost_usd",
+        lambda _model_name, _usage: None,
+    )
+    perf_counter_values = iter([10.0, 11.234])
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt.perf_counter",
+        lambda: next(perf_counter_values),
+    )
+
+    temp_root = Path.cwd() / "_request_timing_test_tmp"
+    shutil.rmtree(temp_root, ignore_errors=True)
+
+    try:
+        temp_root.mkdir(parents=True)
+        trace_path = temp_root / "thoughts.txt"
+        trace_logger = _TraceLogger(enabled=True, path=trace_path)
+
+        payload = _request_structured_scoring(
+            client=_FakeClient(),
+            model_name="gpt-5.4",
+            request_input=[],
+            reasoning_effort="medium",
+            trace_logger=trace_logger,
+            trace_label="Overview Pass",
+        )
+        trace_logger.save()
+
+        trace_text = trace_path.read_text(encoding="utf-8")
+        assert payload == {"segments": []}
+        assert "- elapsed_seconds: 1.23" in trace_text
+        assert "- reasoning_effort:" not in trace_text
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)

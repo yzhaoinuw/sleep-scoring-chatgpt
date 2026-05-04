@@ -39,7 +39,7 @@ The repo is meant to:
 - runs either one overview call or fixed one-hour zoom-window calls,
 - parses structured Responses API output,
 - overlays accepted Wake/REM segments onto the score array,
-- records per-call artifacts and optional thought traces.
+- records per-call artifacts and optional thought traces, with top-level run settings plus per-call timing, token usage, cost estimate, and proposed segments.
 
 ### 3. ChatGPT helper layer
 
@@ -85,7 +85,7 @@ A typical run writes:
 - input snapshot PNGs sent to the model,
 - prediction-overlay PNGs,
 - `model_output.json`,
-- an optional thought trace markdown/text file.
+- an optional thought trace markdown/text file with streamlined run-level settings and per-call request summaries.
 
 The bundled reference example pack also ships with:
 

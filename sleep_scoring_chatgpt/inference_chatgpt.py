@@ -21,6 +21,7 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 import numpy as np
@@ -1063,18 +1064,20 @@ def _request_structured_scoring(
     trace_label: str = "ChatGPT Request",
 ) -> dict[str, Any]:
     """Send one structured scoring request and return the decoded payload."""
+    request_started_at = perf_counter()
     response = client.responses.create(
         model=model_name,
         input=request_input,
         reasoning={"effort": reasoning_effort},
         text={"format": RESPONSE_TEXT_FORMAT},
     )
+    elapsed_seconds = perf_counter() - request_started_at
     payload = _extract_response_payload(response)
     usage = _extract_response_usage(response)
     cost_estimate_usd = _estimate_response_cost_usd(model_name, usage)
 
     if trace_logger is not None:
-        usage_lines = [f"- reasoning_effort: {reasoning_effort}"]
+        usage_lines = [f"- elapsed_seconds: {elapsed_seconds:.2f}"]
         if usage is None:
             usage_lines.extend(
                 [
@@ -1138,10 +1141,6 @@ def _run_fixed_window_pass(
 
     if trace_logger is not None:
         trace_logger.add_text_block(
-            f"{trace_prefix} Mode",
-            [f"- fixed_windows ({refinement_window_seconds}s windows)"],
-        )
-        trace_logger.add_text_block(
             f"{trace_prefix} Windows",
             [
                 line
@@ -1183,12 +1182,6 @@ def _run_fixed_window_pass(
                 snapshot_path,
             )
             image_data_url = _image_path_to_data_url(snapshot_path)
-
-            if trace_logger is not None:
-                trace_logger.add_text_block(
-                    f"{trace_prefix} {candidate_index} Window",
-                    _format_refinement_window(candidate, recording_start_s),
-                )
 
             request_input = (
                 _build_zoom_section_request_input(
@@ -1294,16 +1287,22 @@ def infer(
     )
     trace_logger.add_text_block(
         "Trace Info",
-        [
+        (
+            [
             f"- timestamp: {datetime.now().isoformat(timespec='seconds')}",
             f"- model: {model_name}",
             f"- confidence_threshold: {threshold:.2f}",
             f"- inference_mode: {normalized_inference_mode}",
-            f"- refinement_window_seconds: {normalized_refinement_window_seconds}",
             f"- vision_figure_mode: {normalized_vision_figure_mode}",
             f"- reasoning_effort: {normalized_reasoning_effort}",
             f"- reference_examples: {normalized_use_reference_examples}",
-        ],
+            ]
+            + (
+                [f"- refinement_window_seconds: {normalized_refinement_window_seconds}"]
+                if normalized_inference_mode == "fixed_windows"
+                else []
+            )
+        ),
     )
 
     client = _build_openai_client(client=client)
@@ -1393,17 +1392,9 @@ def infer(
                 segments=coarse_segments,
                 confidence_threshold=threshold,
             )
-            trace_logger.add_text_block(
-                "Fixed Window Pass",
-                ["- skipped; inference_mode is overview_only."],
-            )
         else:
             predictions = base_scores.copy()
             confidence = fallback_confidence.copy()
-            trace_logger.add_text_block(
-                "Overview Pass",
-                ["- skipped; inference_mode is fixed_windows."],
-            )
             predictions, confidence = _run_fixed_window_pass(
                 mat=mat,
                 figure=figure,

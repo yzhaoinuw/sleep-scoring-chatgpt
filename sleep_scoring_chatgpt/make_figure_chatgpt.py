@@ -211,7 +211,7 @@ if __name__ == "__main__":
 
     io.renderers.default = "browser"
     data_path = "../user_test_files/"
-    mat_file = "830.mat"
+    mat_file = "COM5_bin1.mat"
     mat = loadmat(os.path.join(data_path, mat_file), squeeze_me=True)
 
     mat_name = os.path.basename(mat_file)

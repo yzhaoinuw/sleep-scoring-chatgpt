@@ -59,7 +59,7 @@ A typical run writes:
 - model-facing input snapshot PNGs,
 - prediction-overlay PNGs,
 - `model_output.json` with model-call metadata,
-- an optional thought trace file when thoughts are enabled.
+- an optional thought trace file when thoughts are enabled, including one-time run settings plus per-call timing, token usage, cost estimate, and proposed segments.
 
 ## CLI parameters
 
