@@ -28,10 +28,14 @@ pip install -e .
 pip install -e .[test]
 ```
 
-Set your API key before running:
+Set your API key before running. The backend will honor either a shell environment variable or a project-local `.env` file:
 
 ```powershell
 $env:OPENAI_API_KEY = "your-api-key"
+```
+
+```env
+OPENAI_API_KEY=your-api-key
 ```
 
 ## Usage

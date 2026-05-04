@@ -276,7 +276,7 @@ if __name__ == "__main__":
         raise SystemExit(main())
 
     # Spyder-friendly direct-run settings. Edit these local overrides, then press Run.
-    mat_path = PROJECT_ROOT / "user_test_files" / "830.mat"
+    mat_path = PROJECT_ROOT / "user_test_files" / "COM5_bin1.mat"
     output_dir = PROJECT_ROOT / "chatgpt_preview_outputs" / mat_path.stem
 
     # Model snapshot to call for this direct-run experiment.
@@ -294,7 +294,7 @@ if __name__ == "__main__":
     # High-level scoring flow for this direct-run experiment:
     # - "overview_only": one full-session image
     # - "fixed_windows": one-hour zoom windows
-    inference_mode = "fixed_windows"
+    inference_mode = "overview_only"
 
     # Model-facing figure layout override. ``None`` falls back to the focused default.
     vision_figure_mode = None

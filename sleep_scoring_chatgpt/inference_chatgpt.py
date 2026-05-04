@@ -42,6 +42,7 @@ from sleep_scoring_chatgpt.make_figure_chatgpt import make_chatgpt_vision_figure
 from sleep_scoring_chatgpt.make_figure import get_padded_sleep_scores, make_figure
 
 DEFAULT_CHATGPT_MODEL = CHATGPT_MODEL
+DEFAULT_DOTENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 DEFAULT_SNAPSHOT_DIR = Path(tempfile.gettempdir()) / "sleep_scoring_app_data" / "chatgpt_snapshots"
 DEFAULT_GUIDANCE_PROMPT_PATH = Path(__file__).with_name("chatgpt_scoring_guidance.md")
 DEFAULT_REFERENCE_EXAMPLES_DIR = Path(__file__).resolve().parent / "sleep_scoring_examples"
@@ -592,11 +593,52 @@ def _build_trace_path(snapshot_dir: Path, recording_label: str) -> Path:
     return snapshot_dir / f"{safe_label}_thoughts.txt"
 
 
+def _strip_optional_quotes(value: str) -> str:
+    """Return a dotenv-style value without a single outer quote pair."""
+    stripped_value = value.strip()
+    if len(stripped_value) >= 2 and stripped_value[0] == stripped_value[-1] and stripped_value[0] in {
+        '"',
+        "'",
+    }:
+        return stripped_value[1:-1]
+    return stripped_value
+
+
+def _load_local_env_file(dotenv_path: Path = DEFAULT_DOTENV_PATH) -> None:
+    """Populate OPENAI_API_KEY from a project-local .env file when needed."""
+    if os.getenv(OPENAI_API_KEY_ENV_VAR):
+        return
+
+    try:
+        dotenv_lines = dotenv_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+
+    for raw_line in dotenv_lines:
+        stripped_line = raw_line.strip()
+        if not stripped_line or stripped_line.startswith("#"):
+            continue
+
+        if stripped_line.startswith("export "):
+            stripped_line = stripped_line[len("export ") :].strip()
+
+        if "=" not in stripped_line:
+            continue
+
+        key, value = stripped_line.split("=", 1)
+        if key.strip() != OPENAI_API_KEY_ENV_VAR:
+            continue
+
+        os.environ.setdefault(OPENAI_API_KEY_ENV_VAR, _strip_optional_quotes(value))
+        return
+
+
 def _build_openai_client(client: Any = None) -> Any:
     """Return the provided client or create an OpenAI client when available."""
     if client is not None:
         return client
 
+    _load_local_env_file()
     api_key = os.getenv(OPENAI_API_KEY_ENV_VAR)
     if not api_key:
         return None
@@ -611,6 +653,7 @@ def _build_openai_client(client: Any = None) -> Any:
 
 def get_backend_ready_status() -> tuple[bool, str]:
     """Return whether the ChatGPT backend can make live API requests."""
+    _load_local_env_file()
     api_key = os.getenv(OPENAI_API_KEY_ENV_VAR)
     if not api_key:
         return (
@@ -1336,9 +1379,17 @@ def infer(
                     recording_start_s=recording_start_s,
                 )
             coarse_uncertain_intervals = []
+            predictions, confidence = _fill_interval_with_stage(
+                predictions=base_scores.copy(),
+                confidence=fallback_confidence.copy(),
+                start_idx=0,
+                end_idx=duration_s,
+                state="NREM",
+                confidence_value=DEFAULT_NREM_CONFIDENCE,
+            )
             predictions, confidence = _overlay_structured_scoring(
-                current_predictions=base_scores,
-                current_confidence=fallback_confidence,
+                current_predictions=predictions,
+                current_confidence=confidence,
                 segments=coarse_segments,
                 confidence_threshold=threshold,
             )

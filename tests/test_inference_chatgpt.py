@@ -1,14 +1,19 @@
 """Tests for reference-example prompt assembly."""
 
 import json
+import os
 from pathlib import Path
 import shutil
+
+import numpy as np
 
 from sleep_scoring_chatgpt.inference_chatgpt import (
     REFERENCE_EXAMPLE_DATA_FILENAME,
     REFERENCE_EXAMPLE_IMAGE_SPECS,
     _build_reference_examples_message,
     _build_zoom_section_request_input,
+    _load_local_env_file,
+    infer,
 )
 
 
@@ -122,3 +127,80 @@ def test_build_zoom_section_request_input_includes_reference_examples_message():
     assert request_input[0]["role"] == "system"
     assert request_input[1] == reference_examples_message
     assert request_input[2]["role"] == "user"
+
+
+def test_load_local_env_file_reads_openai_api_key_without_overriding_shell_env(monkeypatch):
+    """Local .env loading should set the key only when the shell has not set one."""
+    temp_root = Path.cwd() / "_dotenv_test_tmp"
+    shutil.rmtree(temp_root, ignore_errors=True)
+
+    try:
+        dotenv_path = temp_root / ".env"
+        temp_root.mkdir(parents=True)
+        dotenv_path.write_text(
+            '# Local API key for testing\nOPENAI_API_KEY="dotenv-key"\n',
+            encoding="utf-8",
+        )
+
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        _load_local_env_file(dotenv_path)
+        assert os.environ["OPENAI_API_KEY"] == "dotenv-key"
+
+        monkeypatch.setenv("OPENAI_API_KEY", "shell-key")
+        dotenv_path.write_text("OPENAI_API_KEY=updated-dotenv-key\n", encoding="utf-8")
+        _load_local_env_file(dotenv_path)
+        assert os.environ["OPENAI_API_KEY"] == "shell-key"
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_overview_only_fills_unlabeled_time_as_nrem(monkeypatch):
+    """Overview-only inference should seed the full recording as NREM."""
+    def _fake_capture_overview_snapshot(_figure, output_path):
+        output_path = Path(output_path)
+        output_path.write_bytes(b"png")
+        return output_path
+
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._load_guidance_prompt",
+        lambda _path: "guidance",
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._build_model_figure",
+        lambda **_kwargs: object(),
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt.capture_overview_snapshot",
+        _fake_capture_overview_snapshot,
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._image_path_to_data_url",
+        lambda _image_path: "data:image/png;base64,abc",
+    )
+    monkeypatch.setattr(
+        "sleep_scoring_chatgpt.inference_chatgpt._request_structured_scoring",
+        lambda **_kwargs: {"segments": []},
+    )
+
+    mat = {
+        "eeg": np.zeros(10, dtype=float),
+        "eeg_frequency": 1.0,
+    }
+
+    temp_root = Path.cwd() / "_overview_infer_test_tmp"
+    shutil.rmtree(temp_root, ignore_errors=True)
+
+    try:
+        predictions, confidence = infer(
+            mat=mat,
+            client=object(),
+            snapshot_dir=temp_root,
+            show_thoughts=False,
+            inference_mode="overview_only",
+            use_reference_examples=False,
+        )
+
+        assert np.all(predictions == 1)
+        assert np.all(confidence == 1.0)
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)

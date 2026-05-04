@@ -6,6 +6,12 @@ Prepend new session notes to the top of this file.
 
 ### Done Today
 
+- Clarified the direct-run parameter block comments in `run_inference_chatgpt.py` so they read as local overrides rather than silently implying lockstep sync with `config.py`.
+- Updated the README intro to point back to the source `sleep_scoring` repository branch used for the extraction.
+- Added project-local `.env` loading for `OPENAI_API_KEY` so the backend now honors the documented local-key workflow without requiring the parent shell to preload the variable.
+- Made `overview_only` inference seed the full recording as `NREM` before overlaying model-returned `Wake`/`REM` bouts, bringing its baseline behavior in line with `fixed_windows`.
+- Added runtime environment notes to this repo's `AGENTS.md`, including the known-good conda interpreter path and a pytest temp-directory workaround for this machine.
+- Reworked the newer inference tests to use explicit repo-local temp folders instead of pytest's default temp fixture, avoiding local Windows permission issues during cleanup.
 - Removed the leftover app-style `assets/` nesting from the packaged reference examples.
 - Moved the bundled reference-example pack to `sleep_scoring_chatgpt/sleep_scoring_examples/`.
 - Simplified inference configuration to two explicit modes:
@@ -29,6 +35,7 @@ Prepend new session notes to the top of this file.
 
 ### Verification
 
+- Ran `C:\Users\yzhao\miniconda3\envs\sleep_scoring_dash3.0\python.exe -m pytest tests\test_inference_chatgpt.py` and confirmed all focused inference tests pass after the temp-folder rewrite.
 - Ran `C:\Users\yzhao\miniconda3\envs\sleep_scoring_dash3.0\python.exe -m pytest tests\test_chatgpt_tools.py tests\test_inference_chatgpt.py` and confirmed all tests pass.
 - Ran `C:\Users\yzhao\miniconda3\envs\sleep_scoring_dash3.0\python.exe -m compileall sleep_scoring_chatgpt`.
 
