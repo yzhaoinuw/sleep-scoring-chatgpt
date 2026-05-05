@@ -57,6 +57,11 @@ DEFAULT_VISION_FIGURE_MODE = "focused"
 OPENAI_API_KEY_ENV_VAR = "OPENAI_API_KEY"
 DEFAULT_NREM_CONFIDENCE = 1.0
 MODEL_PRICING_USD_PER_1M_TOKENS = {
+    "gpt-5.5": {
+        "input": 5.00,
+        "cached_input": 0.50,
+        "output": 30.00,
+    },
     "gpt-5.4": {
         "input": 2.50,
         "cached_input": 0.25,

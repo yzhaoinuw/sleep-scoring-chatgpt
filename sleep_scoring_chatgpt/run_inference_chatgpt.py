@@ -280,7 +280,7 @@ if __name__ == "__main__":
     output_dir = PROJECT_ROOT / "chatgpt_preview_outputs" / mat_path.stem
 
     # Model snapshot to call for this direct-run experiment.
-    model_name = "gpt-5.4"
+    model_name = "gpt-5.5"
 
     # Responses API reasoning effort for this direct-run experiment.
     reasoning_effort = "medium"

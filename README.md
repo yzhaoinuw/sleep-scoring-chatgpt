@@ -52,6 +52,19 @@ Or use the installed script:
 sleep-scoring-chatgpt .\path\to\recording.mat .\chatgpt_preview_outputs\recording
 ```
 
+If you already have a saved `model_output.json` and want a `.mat` file with rebuilt
+ChatGPT `sleep_scores` for plotting:
+
+```powershell
+python -m sleep_scoring_chatgpt.export_prediction_mat .\chatgpt_preview_outputs\recording\model_output.json .\chatgpt_preview_outputs\recording\prediction_scores.mat
+```
+
+Or use the installed script:
+
+```powershell
+sleep-scoring-chatgpt-export-mat .\chatgpt_preview_outputs\recording\model_output.json .\chatgpt_preview_outputs\recording\prediction_scores.mat
+```
+
 ## Output
 
 A typical run writes:

@@ -25,6 +25,7 @@ test = [
 
 [project.scripts]
 sleep-scoring-chatgpt = "sleep_scoring_chatgpt.run_inference_chatgpt:main"
+sleep-scoring-chatgpt-export-mat = "sleep_scoring_chatgpt.export_prediction_mat:main"
 
 [tool.setuptools]
 include-package-data = true

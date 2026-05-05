@@ -13,6 +13,7 @@ from sleep_scoring_chatgpt.inference_chatgpt import (
     REFERENCE_EXAMPLE_IMAGE_SPECS,
     _build_reference_examples_message,
     _build_zoom_section_request_input,
+    _estimate_response_cost_usd,
     _load_local_env_file,
     _request_structured_scoring,
     infer,
@@ -260,3 +261,19 @@ def test_request_structured_scoring_logs_elapsed_seconds(monkeypatch):
         assert "- reasoning_effort:" not in trace_text
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_estimate_response_cost_supports_gpt_5_5():
+    """The trace cost estimator should know the current gpt-5.5 standard rates."""
+    usage = {
+        "input_tokens": 1_200,
+        "cached_input_tokens": 200,
+        "uncached_input_tokens": 1_000,
+        "output_tokens": 100,
+        "reasoning_tokens": 50,
+        "total_tokens": 1_300,
+    }
+
+    cost = _estimate_response_cost_usd("gpt-5.5", usage)
+
+    assert cost == 0.0081
